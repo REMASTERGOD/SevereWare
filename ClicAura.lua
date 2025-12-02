@@ -1,10 +1,12 @@
 --!optimize 2
 --!strict
 
-local CPS = 20
-local ActivationDistance = 5
-local TeamCheck = false
-local ToggleKey = "V"
+local config = _G.ClicAuraConfig or {
+    CPS = 20,
+    ActivationDistance = 5,
+    TeamCheck = true,
+    ToggleKey = "V"
+}
 
 local Enabled, MasterToggle, LastKeyState = false, false, false
 local Players, LocalPlayer = game:GetService("Players"), game:GetService("Players").LocalPlayer
@@ -25,7 +27,7 @@ local GamePaths = {
             end
             return nil
         end
-    },
+    }
 }
 
 local CurrentGameID = game.GameId
@@ -70,7 +72,7 @@ local function f()
     local p, d = r.Position, math.huge
     
     for _, v in Players:GetChildren() do
-        if v ~= LocalPlayer and (not TeamCheck or v.Team ~= LocalPlayer.Team) then
+        if v ~= LocalPlayer and (not config.TeamCheck or v.Team ~= LocalPlayer.Team) then
             local t = GetPlayerHRP(v)
             local h = GetPlayerHumanoid(v)
             
@@ -90,7 +92,7 @@ task.spawn(function()
         local p = false
         
         for _, v in ipairs(k) do
-            if tostring(v) == ToggleKey then
+            if tostring(v) == config.ToggleKey then
                 p = true
                 break
             end
@@ -108,13 +110,13 @@ end)
 
 task.spawn(function()
     while true do
-        Enabled = MasterToggle and f() <= ActivationDistance
+        Enabled = MasterToggle and f() <= config.ActivationDistance
         task.wait(0.1)
     end
 end)
 
 task.spawn(function()
-    local w = 1 / CPS
+    local w = 1 / config.CPS
     while true do
         if Enabled then
             mouse1press()
