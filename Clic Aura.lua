@@ -3,7 +3,7 @@
 
 local CPS = 20
 local ActivationDistance = 5
-local TeamCheck = true
+local TeamCheck = false
 local ToggleKey = "V"
 
 local Enabled, MasterToggle, LastKeyState = false, false, false
