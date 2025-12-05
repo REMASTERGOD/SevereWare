@@ -1,7 +1,6 @@
 -- ========================================
 -- CONFIGURATION
 -- ========================================
-
 _G.BeastESPConfig = _G.BeastESPConfig or {
     -- ESP Settings
     Enabled = true,
@@ -34,7 +33,6 @@ local Camera = workspace.CurrentCamera
 -- ========================================
 -- CACHE CONSTANTS
 -- ========================================
-
 local CACHE = {
     BeastText = "Beast",
     HumanText = "Human",
@@ -56,7 +54,6 @@ local ScreensCache = {
 -- ========================================
 -- TEXT POOLING SYSTEM
 -- ========================================
-
 local TextPool = {}
 local TextPoolSize = 0
 
@@ -69,11 +66,11 @@ local function AcquireText()
     end
     
     local text = Drawing.new("Text")
-    text.Size = CONFIG.TextSize
-    text.Font = CONFIG.TextFont
+    text.Size = CONFIG.TextSize or 14
+    text.Font = CONFIG.TextFont or 1
     text.Center = true
     text.Outline = true
-    text.OutlineColor = CONFIG.OutlineColor
+    text.OutlineColor = CONFIG.OutlineColor or Color3.fromRGB(0, 0, 0)
     text.Visible = false
     return text
 end
@@ -87,7 +84,6 @@ end
 -- ========================================
 -- BEAST DETECTION
 -- ========================================
-
 local BeastCache = {}
 
 local function CheckBeastPowers(playerName)
@@ -104,7 +100,6 @@ end
 -- ========================================
 -- SCREEN DETECTION
 -- ========================================
-
 local function ColoresIguales(c1, c2, tol)
     if not c1 or not c2 then return false end
     local dr = math.abs(c1.r - c2.r)
@@ -136,7 +131,9 @@ end
 
 local function UpdateScreensCache()
     local currentTime = tick()
-    if currentTime - ScreensCache.LastCheck < CONFIG.ScreenCheckRate then
+    local checkRate = CONFIG.ScreenCheckRate or 2.0
+    
+    if currentTime - ScreensCache.LastCheck < checkRate then
         return
     end
     
@@ -153,7 +150,7 @@ local function UpdateScreensCache()
             if screen then
                 local color = GetScreenColor(screen)
                 if color then
-                    local isNormal = ColoresIguales(color, CONFIG.ScreenNormal, CONFIG.ScreenTolerance)
+                    local isNormal = ColoresIguales(color, CONFIG.ScreenNormal or {r = 13, g = 105, b = 172}, CONFIG.ScreenTolerance or 5)
                     table.insert(ScreensCache.Screens, {
                         Part = screen,
                         IsHacked = not isNormal
@@ -170,7 +167,7 @@ local function UpdateScreensCache()
                 if screen then
                     local color = GetScreenColor(screen)
                     if color then
-                        local isNormal = ColoresIguales(color, CONFIG.ScreenNormal, CONFIG.ScreenTolerance)
+                        local isNormal = ColoresIguales(color, CONFIG.ScreenNormal or {r = 13, g = 105, b = 172}, CONFIG.ScreenTolerance or 5)
                         table.insert(ScreensCache.Screens, {
                             Part = screen,
                             IsHacked = not isNormal
@@ -185,7 +182,6 @@ end
 -- ========================================
 -- UTILITY FUNCTIONS
 -- ========================================
-
 local function DistanceSquared(pos1, pos2)
     local dx = pos1.X - pos2.X
     local dy = pos1.Y - pos2.Y
@@ -236,7 +232,6 @@ end
 -- ========================================
 -- LABEL MANAGEMENT
 -- ========================================
-
 local PlayerLabels = {}
 local ScreenLabels = {}
 
@@ -264,7 +259,6 @@ end
 -- ========================================
 -- TOGGLE FUNCTIONALITY
 -- ========================================
-
 local function ToggleESP()
     CONFIG.Enabled = not CONFIG.Enabled
     
@@ -272,6 +266,7 @@ local function ToggleESP()
         print("[Beast ESP] Enabled")
     else
         print("[Beast ESP] Disabled")
+        -- Hide all labels when disabled
         for _, label in pairs(PlayerLabels) do
             label.Visible = false
         end
@@ -281,13 +276,14 @@ local function ToggleESP()
     end
 end
 
+-- Key handler for toggle
 task.spawn(function()
     while true do
         local pressedKeys = getpressedkeys()
         for _, key in ipairs(pressedKeys) do
-            if key == CONFIG.ToggleKey then
+            if key == (CONFIG.ToggleKey or "X") then
                 ToggleESP()
-                task.wait(0.3)
+                task.wait(0.3) -- Debounce
                 break
             end
         end
@@ -298,7 +294,6 @@ end)
 -- ========================================
 -- BEAST DETECTION LOOP
 -- ========================================
-
 task.spawn(function()
     while true do
         if CONFIG.Enabled then
@@ -308,34 +303,35 @@ task.spawn(function()
                 BeastCache[playerData.Name] = CheckBeastPowers(playerData.Name)
             end
         end
-        task.wait(CONFIG.CheckRate)
+        task.wait(CONFIG.CheckRate or 0.1)
     end
 end)
 
 -- ========================================
 -- MAIN RENDER LOOP
 -- ========================================
-
 task.spawn(function()
     while true do
         if not CONFIG.Enabled then
-            task.wait(CONFIG.RenderRate)
+            task.wait(CONFIG.RenderRate or 0.016)
             continue
         end
         
         if not Camera then
-            task.wait(CONFIG.RenderRate)
+            task.wait(CONFIG.RenderRate or 0.016)
             continue
         end
         
         local cameraPos = Camera.CFrame.Position
-        local maxDistSq = CONFIG.MaxDistance * CONFIG.MaxDistance
+        local maxDistance = CONFIG.MaxDistance or 300
+        local maxDistSq = maxDistance * maxDistance
         
         UpdateScreensCache()
         
         local players = GetPlayersInWorkspace()
         local activePlayers = {}
         
+        -- Render player labels
         for i = 1, #players do
             local playerData = players[i]
             local playerName = playerData.Name
@@ -376,16 +372,17 @@ task.spawn(function()
             
             if isBeast then
                 label.Text = CACHE.BeastText
-                label.Color = CONFIG.BeastColor
+                label.Color = CONFIG.BeastColor or Color3.fromRGB(255, 50, 50)
             else
                 label.Text = CACHE.HumanText
-                label.Color = CONFIG.HumanColor
+                label.Color = CONFIG.HumanColor or Color3.fromRGB(100, 150, 255)
             end
             
-            label.Position = Vector2.new(screenPos.X, screenPos.Y + CONFIG.TextOffsetY)
+            label.Position = Vector2.new(screenPos.X, screenPos.Y + (CONFIG.TextOffsetY or 16))
             label.Visible = true
         end
         
+        -- Clean up disconnected players
         for playerName in pairs(PlayerLabels) do
             if not activePlayers[playerName] then
                 DestroyPlayerLabel(playerName)
@@ -393,6 +390,7 @@ task.spawn(function()
             end
         end
         
+        -- Render screen labels
         for i = 1, #ScreensCache.Screens do
             local screenData = ScreensCache.Screens[i]
             if screenData.Part then
@@ -402,13 +400,13 @@ task.spawn(function()
                     
                     if screenData.IsHacked then
                         label.Text = CACHE.ScreenHackedText
-                        label.Color = CONFIG.ScreenHackedColor
+                        label.Color = CONFIG.ScreenHackedColor or Color3.fromRGB(50, 255, 100)
                     else
                         label.Text = CACHE.ScreenOKText
-                        label.Color = CONFIG.ScreenOKColor
+                        label.Color = CONFIG.ScreenOKColor or Color3.fromRGB(50, 150, 255)
                     end
                     
-                    label.Position = Vector2.new(screenPos.X, screenPos.Y + CONFIG.TextOffsetY)
+                    label.Position = Vector2.new(screenPos.X, screenPos.Y + (CONFIG.TextOffsetY or 16))
                     label.Visible = true
                 else
                     if ScreenLabels[i] then
@@ -418,13 +416,14 @@ task.spawn(function()
             end
         end
         
+        -- Hide extra screen labels
         for i = #ScreensCache.Screens + 1, #ScreenLabels do
             if ScreenLabels[i] then
                 ScreenLabels[i].Visible = false
             end
         end
         
-        task.wait(CONFIG.RenderRate)
+        task.wait(CONFIG.RenderRate or 0.016)
     end
 end)
 
@@ -458,5 +457,6 @@ end
 _G.BeastESPCleanup = Cleanup
 
 print("[Beast ESP] Loaded successfully")
-print("[Beast ESP] Toggle key: " .. CONFIG.ToggleKey)
+print("[Beast ESP] Toggle key: " .. (CONFIG.ToggleKey or "X"))
 print("[Beast ESP] Status: " .. (CONFIG.Enabled and "Enabled" or "Disabled"))
+
